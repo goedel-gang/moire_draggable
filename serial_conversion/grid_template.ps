@@ -1,0 +1,439 @@
+%!PS-Adobe-3.0
+%%Orientation: Portrait
+%%DocumentMedia: s {screen_width} {screen_height} 80 ()
+%%Pages: 1
+%%EndComments
+%%EndProlog
+%%BeginSetup
+  << /PageSize [{screen_width} {screen_height}] /Orientation 0 >> setpagedevice
+%%EndSetup
+%%Page: 1 1
+%%BeginPageSetup
+%%EndPageSetup
+
+%^page setup. I found this somewhere and it works so I'm hesitant to touch it
+
+%Postscript is normally considered "printer language" but is actually a very
+%elegant and fun way to draw vector graphic programmatically. It works using a
+%stack, to which all operands are pushed, and from which operators can pop
+%operands, with postfix notation. most of this is written quite conventionally,
+%meaning that I take parameters and bind them to names as much as I can. This
+%could probably be written using only stack commands and it would be a little
+%faster but such a task is beyond me or anyone trying to read my code
+
+%I can make no guarantees about how well this will work. It has worked for me
+%on my ubuntu laptop running it with ghostscript.
+
+#This is a postscript template file to draw a grid serialised by the processing sketch moire_draggable
+#This template is designed to be filled in by the Python script convert.py. Note that this script
+#preprocesses out these "special comments" starting with a hash sign. All
+#names between single curly braces are parameters which will be processed in.
+
+#here the script can insert code to draw a background
+{background}
+
+%constants which may be used in drawing some grids
+/TRIANGLE_HEIGHT 3 sqrt 2 div def
+/ROOT_TWO 2 sqrt def
+
+#note that all normal curly braces are replaced with double curly braces, as
+#this file is essentially one big Python formattable string.
+
+%functions each have their own dict, which acts as their own namespace.
+%parameters are taken by expecting them to be on the stack and using exch to
+%push them in front of their names.
+
+%a function to perform the standard transformations for a grid
+/std_setup {{
+3 dict begin
+/rotation exch def
+/y exch def
+/x exch def
+    x y translate
+    rotation rotate
+end
+}} bind def
+
+%a function to undo this setup. normally something like this would be done
+%using gsave and grestore, but the way I draw grids is quite fragile and adds
+%things to the graphics state (it draws a very large path) so restoring the
+%graphics state would break the grid drawing functionality (which I quite like)
+/undo_setup {{
+3 dict begin
+/rotation exch def
+/y exch def
+/x exch def
+    rotation neg rotate
+    x neg y neg translate
+end
+}} bind def
+
+%a function taking a unit and then further parameters. the unit is an
+%executable which draws a unit of a grid at 0 0. single_grid means one
+%square-shaped grid using this unit (for example, a square packing of circle
+%might be drawn by providing single_grid with an executable drawing a circle)
+%single_grid will then draw a whole grid at its 0 0. note that it takes a
+%radius - I draw my grids as circles with a radius. This means I don't have to
+%worry about rotation, which would otherwise be a big pain
+/single_grid {{
+12 dict begin
+/y_gap_factor exch def
+/x_gap_factor exch def
+/unit exch def
+/radius exch def
+/stroke_width exch def
+/gap_size exch def
+    /rsq radius 2 exp def
+    /x_gap gap_size x_gap_factor mul def
+    /y_gap gap_size y_gap_factor mul def
+    0 y_gap radius {{
+        /yi exch def
+        /w rsq yi 2 exp sub sqrt def
+        0 x_gap w {{
+            /xi exch def
+            xi yi translate gap_size stroke_width unit
+            xi neg yi neg translate
+
+            xi yi neg y_gap sub translate gap_size stroke_width unit
+            xi neg yi y_gap add translate
+
+            xi neg x_gap sub yi translate gap_size stroke_width unit
+            xi x_gap add yi neg translate
+
+            xi neg x_gap sub yi neg y_gap sub translate gap_size stroke_width unit
+            xi x_gap add yi y_gap add translate
+        }} for
+    }} for
+}} bind def
+
+%this, similarly to single_grid takes a unit. However, this draws two grids -
+%one exactly as single grid, and another like single grid but in between the
+%gaps of the first grid. This overlay of two orthogonal grids actually lets me
+%quite elegantly draw all the polysymmetric grid types (that aren't drawn by
+%single_grid) that I've thought of - a hexagonal circle packing can be drawn as
+%one grid of rows of circles with gaps between them, and then by drawing
+%another such grid in these gaps in between the other circles, for example.
+%originally I tried implementing this by drawing two single_grids. however this
+%didn't work and I had a weird bug in trying to re-wrap unit in curly braces to
+%pass it on, and this worked, so I'm not touching it
+/dual_grid {{
+12 dict begin
+/y_gap_factor exch def
+/x_gap_factor exch def
+/unit exch def
+/radius exch def
+/stroke_width exch def
+/gap_size exch def
+    /rsq radius 2 exp def
+    /x_gap gap_size x_gap_factor mul def
+    /y_gap gap_size y_gap_factor mul def
+    0 y_gap radius {{
+        /yi exch def
+        /w rsq yi 2 exp sub sqrt def
+        0 x_gap w {{
+            /xi exch def
+
+
+            xi yi translate gap_size stroke_width unit
+            xi neg yi neg translate
+
+            xi yi neg y_gap sub translate gap_size stroke_width unit
+            xi neg yi y_gap add translate
+
+            xi neg x_gap sub yi translate gap_size stroke_width unit
+            xi x_gap add yi neg translate
+
+            xi neg x_gap sub yi neg y_gap sub translate gap_size stroke_width unit
+            xi x_gap add yi y_gap add translate
+
+
+            x_gap 2 div y_gap 2 div translate
+
+
+            xi yi translate gap_size stroke_width unit
+            xi neg yi neg translate
+
+            xi yi neg y_gap sub translate gap_size stroke_width unit
+            xi neg yi y_gap add translate
+
+            xi neg x_gap sub yi translate gap_size stroke_width unit
+            xi x_gap add yi neg translate
+
+            xi neg x_gap sub yi neg y_gap sub translate gap_size stroke_width unit
+            xi x_gap add yi y_gap add translate
+
+
+            x_gap 2 div neg y_gap 2 div neg translate
+
+        }} for
+    }} for
+}} bind def
+
+%takes a grid draw (that draws a grid path at 0 0 given gap_size, stroke_width
+%and radius) and uses it to draw a filled grid
+/draw_grid {{
+10 dict begin
+/b exch def
+/g exch def
+/r exch def
+/radius exch def
+/stroke_width exch def
+/gap_size exch def
+/rotation exch def
+/y exch def
+/x exch def
+/grid exch def
+    gsave r g b setrgbcolor
+    x y rotation std_setup
+    newpath
+    gap_size stroke_width radius grid
+    fill grestore
+end
+}} bind def
+
+%average the last two operands on the stack
+/avg {{ add 2 div }} bind def
+
+%like draw_grid, but takes specifically the parameters for two grids and draws
+%them emulating an alpha channel using clip. This function is the reason that
+%all grids draw paths and don't just use stroke - if they draw a path, I can
+%use clip to determine where they intersect.
+/draw_alpha {{
+19 dict begin
+/b exch def
+/g exch def
+/r exch def
+/radius exch def
+/stroke_width exch def
+/gap_size exch def
+/rotation exch def
+/y exch def
+/x exch def
+    
+/b2 exch def
+/g2 exch def
+/r2 exch def
+/radius2 exch def
+/stroke_width2 exch def
+/gap_size2 exch def
+/rotation2 exch def
+/y2 exch def
+/x2 exch def
+
+/grid exch def
+    gsave
+    r g b setrgbcolor
+    newpath
+    x y rotation std_setup
+    gap_size stroke_width radius grid fill
+    grestore
+
+    gsave
+    r g b setrgbcolor
+    r2 g2 b2 setrgbcolor
+    newpath
+    x2 y2 rotation2 std_setup
+    gap_size2 stroke_width2 radius2 grid fill
+    grestore
+
+    gsave
+    newpath
+    x y rotation std_setup
+    gap_size stroke_width radius grid clip 
+    x y rotation undo_setup
+    r r2 avg g g2 avg b b2 avg setrgbcolor
+    newpath
+    x2 y2 rotation2 std_setup
+    gap_size2 stroke_width2 radius2 grid fill
+    grestore
+end
+}} bind def
+
+%draws line as rectangle, on one height given x intervals and stroke width
+/draw_line {{
+4 dict begin
+/stroke_width exch 2 div def
+/x2 exch def
+/y1 exch def
+/x1 exch def
+    x1 y1 stroke_width add moveto
+    x1 y1 stroke_width sub lineto
+    x2 y1 stroke_width sub lineto
+    x2 y1 stroke_width add lineto
+    x1 y1 stroke_width add lineto
+end
+}} bind def
+
+%as it says on the tin - grid of squares
+/SquareGrid {{
+6 dict begin
+/radius exch def
+/stroke_width exch def
+/gap_size exch def
+    /rsq radius 2 exp def
+
+    0 gap_size radius {{
+        /h exch def
+        /w rsq h 2 exp sub sqrt def
+
+        w h w neg stroke_width draw_line
+        w h neg gap_size sub w neg stroke_width draw_line
+        90 rotate
+        w h w neg stroke_width draw_line
+        w h neg gap_size sub w neg stroke_width draw_line
+        -90 rotate
+    }} for
+end
+}} bind def
+
+%contentric circles (donuts, really)
+/ConcentricGrid {{
+5 dict begin
+/radius exch def
+/stroke_width exch def
+/gap_size exch def
+    /rsq radius 2 exp def
+    0 gap_size radius {{
+        /h exch def
+        h 0 moveto
+        0 0 h stroke_width 2 div add 0 360 arc
+        0 0 h stroke_width 2 div sub 360 0 arcn
+    }} for
+end
+}} bind def
+
+%a grid drawing radial lines from its centre. This is called TriangleRadial
+%because the "lines" are actually triangles, meaning they are this in the
+%centre so do not block each other, allowing for better vision of the patterns
+%formed.
+/TriangleRadial {{
+5 dict begin
+/radius exch def
+/stroke_width exch def
+/gap_size exch def
+    /abs_stroke stroke_width radius mul 2 mul {screen_width} div def
+    0 0 moveto
+    1 1 gap_size floor 2 mul {{
+        /i exch def
+        180 gap_size floor div rotate
+        abs_stroke 2 mul radius lineto
+        abs_stroke -2 mul radius lineto
+        0 0 lineto
+    }} for
+end
+}} bind def
+
+%a honeycomb grid of hexagons, using dual_grid. Each unit is actually not a
+%whole hexagon but half of one, as each side belongs to two of the honeycomb
+%cells
+/HexagonalGrid {{
+0 dict begin
+    {{
+    4 dict begin
+    /stroke_width exch 2 div def
+    /gap_size exch def
+        /h_stroke_width stroke_width 2 div def
+        /tri_stroke_width stroke_width TRIANGLE_HEIGHT mul def
+        -0.5 gap_size mul stroke_width sub TRIANGLE_HEIGHT gap_size mul moveto
+        h_stroke_width neg tri_stroke_width neg lineto
+        gap_size h_stroke_width add tri_stroke_width neg lineto
+        1.5 gap_size mul stroke_width add TRIANGLE_HEIGHT gap_size mul lineto
+
+        1.5 gap_size mul stroke_width sub TRIANGLE_HEIGHT gap_size mul lineto
+        gap_size h_stroke_width sub tri_stroke_width lineto
+        h_stroke_width tri_stroke_width lineto
+        -0.5 gap_size mul stroke_width add TRIANGLE_HEIGHT gap_size mul lineto
+
+        closepath
+    end
+    }} 3 2 TRIANGLE_HEIGHT mul dual_grid
+end
+}} bind def
+
+%a grid of triangles
+/TriangleGrid {{
+6 dict begin
+/radius exch def
+/stroke_width exch def
+/gap_size exch def
+    /rsq radius 2 exp def
+    0 gap_size radius {{
+        /h exch def
+        /w rsq h 2 exp sub sqrt def
+
+        3 {{
+            w h w neg stroke_width draw_line
+            w h neg gap_size sub w neg stroke_width draw_line
+            60 rotate
+        }} repeat
+        -180 rotate
+    }} for
+end
+}} bind def
+
+%a grid of stars - this uses hexagons but such that they only meet at vertices
+/StarGrid {{
+0 dict begin
+    {{
+    4 dict begin
+    /stroke_width exch 2 div def
+    /gap_size exch def
+        /h_stroke_width stroke_width 2 div def
+        /tri_stroke_width stroke_width TRIANGLE_HEIGHT mul def
+        /hor_stroke_width stroke_width TRIANGLE_HEIGHT div def
+
+            h_stroke_width neg
+            tri_stroke_width neg
+        moveto
+            gap_size h_stroke_width add
+            tri_stroke_width neg
+        lineto
+            gap_size 1.5 mul hor_stroke_width add
+            gap_size TRIANGLE_HEIGHT mul
+        lineto
+            gap_size h_stroke_width add
+            gap_size 2 mul TRIANGLE_HEIGHT mul tri_stroke_width add
+        lineto
+            h_stroke_width neg
+            2 gap_size mul TRIANGLE_HEIGHT mul tri_stroke_width add
+        lineto
+            gap_size -0.5 mul hor_stroke_width sub
+            gap_size TRIANGLE_HEIGHT mul
+        lineto
+        closepath
+
+        h_stroke_width tri_stroke_width moveto
+            gap_size -0.5 mul hor_stroke_width add
+            gap_size TRIANGLE_HEIGHT mul lineto
+        h_stroke_width 2 gap_size mul TRIANGLE_HEIGHT mul tri_stroke_width sub lineto
+        gap_size h_stroke_width sub gap_size 2 mul TRIANGLE_HEIGHT mul tri_stroke_width sub lineto
+        gap_size 1.5 mul hor_stroke_width sub gap_size TRIANGLE_HEIGHT mul lineto
+        gap_size h_stroke_width sub tri_stroke_width lineto
+        closepath
+ 
+    end
+    }} 2 4 TRIANGLE_HEIGHT mul dual_grid
+end
+}} bind def
+
+%a grid of vertical lines
+/LineGrid {{
+6 dict begin
+/radius exch def
+/stroke_width exch def
+/gap_size exch def
+    /rsq radius 2 exp def
+    0 gap_size radius {{
+        /h exch def
+        /w rsq h 2 exp sub sqrt def
+        w h w neg stroke_width draw_line
+        w h neg gap_size sub w neg stroke_width draw_line
+    }} for
+end
+}} bind def
+
+{grids}
+showpage
+
+%%Trailer
+%%EOF
