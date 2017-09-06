@@ -12,6 +12,23 @@ A program to interactively explore the moire interference effect on grids, using
 
 note that a very large portion of the code for this sketch is .java. This is because this allows me to circumvent all of Processing's preprocessing, and I can use more of Java pure OOP functionality like static fields and methods
 
+It is probably one of the best things I've written. It's very flexible in what you can do, in terms of moving and resizing, overlaying different grids, removing bits of UI, finer precision with keyboard, etc. Most constants are entirely customizable (see the two constants pages). Here I've pulled the full list of all the grids it supports:
+
+      new SquareGrid(), 
+      new ConcentricGrid(), 
+      new TriangleRadial(), 
+      new HexagonalGrid(), 
+      new TriangleGrid(), 
+      new StarGrid(), 
+      new OctGrid(), 
+      new SquareStarGrid(), 
+      new SquareOffsetGrid(), 
+      new CrossGrid(), 
+      new CircleGrid(), 
+      new CircleStarGrid(), 
+      new LineGrid(), 
+      new RadialGrid()
+
 Here are some screenshots of what you might begin to do with it, with the "UI" preserved:
 
 ![screenshot](https://github.com/elterminad0r/moire_draggable/blob/master/screenshots/hex.png)
