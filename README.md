@@ -11,3 +11,10 @@ A program to interactively explore the moire interference effect on grids, using
     use i to serialise with image and postscript file - this hasn't been tested much, use at own risk
 
 note that a very large portion of the code for this sketch is .java. This is because this allows me to circumvent all of Processing's preprocessing, and I can use more of Java pure OOP functionality like static fields and methods
+
+Here are some screenshots of what you might begin to do with it, with the "UI" preserved:
+
+![screenshot](https://github.com/elterminad0r/moire_draggable/tree/master/screenshots/hex.ps)
+![screenshot](https://github.com/elterminad0r/moire_draggable/tree/master/screenshots/radial.ps)
+
+Both of these were narrowly obtained before my laptop melted
