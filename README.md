@@ -14,7 +14,7 @@ note that a very large portion of the code for this sketch is .java. This is bec
 
 Here are some screenshots of what you might begin to do with it, with the "UI" preserved:
 
-![screenshot](https://github.com/elterminad0r/moire_draggable/tree/master/screenshots/hex.ps)
-![screenshot](https://github.com/elterminad0r/moire_draggable/tree/master/screenshots/radial.ps)
+![screenshot](https://github.com/elterminad0r/moire_draggable/tree/master/screenshots/hex.png)
+![screenshot](https://github.com/elterminad0r/moire_draggable/tree/master/screenshots/radial.png)
 
 Both of these were narrowly obtained before my laptop melted
